@@ -1,10 +1,10 @@
 #!/bin/bash
 # 
-# Nagios plugin to check Oracle corrupt_block data on DB.
+# Nagios plugin to check Oracle blocking session on DB.
 #
-# $Id: check_ora_corrupt_block_,v 1.0 2020/03/10 10:00:00 $
+# $Id: check_ora_blocking_session,v 1.0 2023/02/14 10:00:00 $
 #
-# Copyright (C) 2020  PHATTT IT_DBA PPF_VN.
+# Copyright (C) 2023  DUCTH IT_DBA .
 #
 
 # ------------------------------ SETTINGS --------------------------------------
@@ -30,13 +30,13 @@ WARN_STATE_TEXT=""
 CRIT_EXCEEDED=0
 # USER
 
-ORACLE_USERNAME="dbsnmp"
-ORACLE_PASSWORD="RngaBO5XEhdj123_fwe"
+ORACLE_USERNAME=""
+ORACLE_PASSWORD=""
 
 # ------------------------------ FUNCTIONS -------------------------------------
 printInfo() {
     echo "Nagios plugin to check Oracle sql query data"
-    echo "Copyright (C) 2020  PHATTT  - IT DBA PPF_VN."
+    echo "Copyright (C) 2023 DUCTH"
 }
 
 printVersion() {
