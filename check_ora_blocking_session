@@ -1,0 +1,217 @@
+#!/bin/bash
+# 
+# Nagios plugin to check Oracle corrupt_block data on DB.
+#
+# $Id: check_ora_corrupt_block_,v 1.0 2020/03/10 10:00:00 $
+#
+# Copyright (C) 2020  PHATTT IT_DBA PPF_VN.
+#
+
+# ------------------------------ SETTINGS --------------------------------------
+# Oracle environment settings (could be parametrized)
+ORACLE_ORATAB="/etc/oratab"
+
+# Temporary work file (will be removed automatically)
+TEMP_FILE="/tmp/check_ora_blocking_session_$$.tmp"
+
+# Nagios plugin return values
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+# Default values
+ASSYSDBA=0
+VERBOSE=0
+CRIT_THRESHOLD=-1
+CRIT_STATE_TEXT=""
+WARN_THRESHOLD=-1
+WARN_STATE_TEXT=""
+CRIT_EXCEEDED=0
+# USER
+
+ORACLE_USERNAME="dbsnmp"
+ORACLE_PASSWORD="RngaBO5XEhdj123_fwe"
+
+# ------------------------------ FUNCTIONS -------------------------------------
+printInfo() {
+    echo "Nagios plugin to check Oracle sql query data"
+    echo "Copyright (C) 2020  PHATTT  - IT DBA PPF_VN."
+}
+
+printVersion() {
+    echo
+    echo "\$Id: check_ora_block_corrupt,v 1.0 2020/03/10 10:00:00 $"
+    echo
+}
+
+printHelp()  {
+	echo
+	echo "usage: $0 -h  -t -u  -p  [-i ] [-s] [-v] [H] [V]"
+	echo
+	echo "This script connects to the specified Oracle instance and executes a simple"
+	echo "statement. If that statement succeeds, the script returns 0."
+	echo
+	echo "OPTIONS:"
+	echo "   -h      Specify the host (required)"
+        echo "   -t      Specify functional team (required)"
+	echo "   -u      Oracle username (required)"
+	echo "   -p      Oracle password for the user (required)"
+	echo "   -i      SID of the instance (default: N/A)"
+	echo "   -s      Force login AS SYSDBA"
+	echo "   -v      Verbose"
+	echo "   -V  	 version info"
+	echo "   -H  	 this help screen"
+	echo
+}
+checkOptions() {
+	while getopts "u:p:i:h:t:vsHV" OPTION; do
+		case $OPTION in
+#			u)
+#				ORACLE_USERNAME=$OPTARG
+#				;;
+#			p)
+#				ORACLE_PASSWORD=$OPTARG
+#				;;
+			i)
+				SERVICE_NAME=$OPTARG
+				;;
+#			h)
+#				HOST=$OPTARG
+#				;;
+                        t)
+                                FUNCTIONAL_TEAM=$OPTARG
+                                ;;
+			v)
+				VERBOSE=1
+				;;
+			s)
+				ASSYSDBA=1
+				;;
+			H) 
+				printInfo
+				printHelp
+				exit $STATE_UNKNOWN
+				;;
+			V) 
+				printInfo
+				printVersion
+				exit $STATE_UNKNOWN
+				;;
+			?) 
+				printInfo
+				printHelp
+				exit $STATE_UNKNOWN
+				;;
+		esac
+	done
+
+#	if [ -z "$ORACLE_USERNAME" ]; then
+#			echo "You must specify a username (-u)!"
+#			usage
+#			exit 1
+#	fi
+
+#	if [ -z "$ORACLE_PASSWORD" ]; then
+#			echo "You must specify a password (-p)!"
+#			usage
+#			exit 1
+#	fi
+
+#	if [ -z "$HOST" ]; then
+#			echo "You must specify a host (-h)!"
+#			usage
+#			exit 1
+#	fi
+	
+	if [ -z "$SERVICE_NAME" ]; then
+			echo "You must specify functional team (-i)!"
+			usage
+			exit 1
+	fi
+
+	
+	if [[ "$ORACLE_USERNAME" == "sys" || "$ORACLE_USERNAME" == "SYS" ]]; then
+			ASSYSDBA=1
+	fi
+}
+# ----------------------------- MAIN PROGRAM -----------------------------------
+checkOptions $@
+
+echo $FUNCTIONAL_TEAM
+
+export ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1
+export SERVICE_NAME="`hostname`/$SERVICE_NAME"
+export ORACLE_SID=$SERVICE_NAME
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+
+
+if [ ! -x "$ORACLE_HOME/bin/sqlplus" ]; then
+    echo "ORA_SQL_QUERY. Error: $ORACLE_HOME/bin/sqlplus not found or not executable."
+    exit $STATE_UNKNOWN
+fi
+
+$ORACLE_HOME/bin/sqlplus -s $ORACLE_USERNAME/$ORACLE_PASSWORD@$SERVICE_NAME <<EOF > $TEMP_FILE
+
+SET VERIFY OFF
+set heading off echo off feed off 
+col error_detail format a150
+break on report
+set linesize 200
+define ft = $FUNCTIONAL_TEAM
+SELECT (b.SERVICE_NAME||':'||b.USERNAME||':'||b.sid||':'||d.owner||':'||d.object_name||':'||e.proxy||':'||module||':'||machine) username
+FROM gV\$LOCK a , gv\$session b, V\$Locked_Object c, dba_Objects d, system.proxies_test e
+WHERE 
+a.SID=b.SID
+and a.sid=c.session_id
+and c.Object_ID = d.Object_ID
+and d.owner = e.client
+and e.proxy = '&ft'
+and (id1, id2, a.type) IN (SELECT id1, id2, type FROM gV\$LOCK WHERE request > 0)
+and request=0;
+set head off
+EOF
+
+				
+column=0
+count=0
+#PERF_DATA="count_file_failed="
+PERF_DATA="count_blocking_session="
+
+if grep -q 'ORA-01017' $TEMP_FILE; then
+	WARN_EXCEEDED=1
+	WARN_STATE_TEXT="${WARN_STATE_TEXT}: invalid username/password"
+	PERF_DATA="${PERF_DATA}${count}"
+	echo "ORA_SQL_QUERY WARNING: $WARN_STATE_TEXT|$PERF_DATA"
+	# Remove temporary work file.
+	rm -f $TEMP_FILE
+	exit $STATE_WARNING
+fi
+
+if [ "`cat $TEMP_FILE`" != "" ]; then
+	while read -r line; do
+		if [ ! -z "$line" ]; then
+			error_detail=$line
+			count=`expr $count + 1`
+			CRIT_EXCEEDED=1
+			CRIT_STATE_TEXT="${CRIT_STATE_TEXT} ${error_detail}" 
+		fi
+	done <"$TEMP_FILE"
+fi
+
+
+# Remove temporary work file.
+#rm -f $TEMP_FILE	
+PERF_DATA="${PERF_DATA}${count}, "
+if [ $CRIT_EXCEEDED -eq 1 ];then   
+	echo -e "ORA_SQL_QUERY CRITICAL: $PERF_DATA - $CRIT_STATE_TEXT"
+	exit $STATE_CRITICAL
+else
+	if [ $count -eq 0 ];then
+		echo -e "ORA_SQL_QUERY OK - $PERF_DATA"
+		exit $STATE_OK
+	else
+		echo -e "ORA_SQL_QUERY UNKNOWN - $PERF_DATA"
+		exit $STATE_UNKNOWN
+	fi
+fi
