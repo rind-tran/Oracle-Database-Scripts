@@ -159,16 +159,17 @@ col error_detail format a150
 break on report
 set linesize 200
 define ft = $FUNCTIONAL_TEAM
-SELECT (b.SERVICE_NAME||':'||b.USERNAME||':'||b.sid||':'||d.owner||':'||d.object_name||':'||e.proxy||':'||module||':'||machine) username
-FROM gV\$LOCK a , gv\$session b, V\$Locked_Object c, dba_Objects d, system.proxies_test e
-WHERE 
-a.SID=b.SID
-and a.sid=c.session_id
+SELECT ('Database: '||d.owner||' Table: '||d.object_name) username
+FROM gV\$LOCK a , v\$session b,  V\$Locked_Object c, dba_Objects d, system.proxies_test e
+WHERE
+a.sid=c.session_id
+and a.sid=b.sid
 and c.Object_ID = d.Object_ID
 and d.owner = e.client
 and e.proxy = '&ft'
 and (id1, id2, a.type) IN (SELECT id1, id2, type FROM gV\$LOCK WHERE request > 0)
-and request=0;
+and request=0
+and a.ctime>180;
 set head off
 EOF
 
