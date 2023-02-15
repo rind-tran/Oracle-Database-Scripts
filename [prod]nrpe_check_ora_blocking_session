@@ -160,7 +160,7 @@ break on report
 set linesize 200
 define ft = $FUNCTIONAL_TEAM
 SELECT ('Database: '||d.owner||' Table: '||d.object_name) username
-FROM gV\$LOCK a , v\$session b,  V\$Locked_Object c, dba_Objects d, system.proxies_test e
+FROM gV\$LOCK a , v\$session b,  V\$Locked_Object c, dba_Objects d, dba_proxies e
 WHERE
 a.sid=c.session_id
 and a.sid=b.sid
