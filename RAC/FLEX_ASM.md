@@ -250,8 +250,78 @@ as root:
 /u01/app/19.0.0/grid/bin/asmca -silent -createDiskGroup \
        -diskGroupName TEMP \
                      -disk '/dev/oracleasm/disks/TEMP01' \
+
+
         -redundancy external \
         -au_size 4 \
         -compatible.rdbms '19.0.0.0.0' \
         -compatible.asm '19.0.0.0.0' \
+```
+
+### Create database response file
+```
+## Copyright(c) Oracle Corporation 1998,2019. All rights reserved.##
+##                                                                ##
+## Specify values for the variables listed below to customize     ##
+## your installation.                                             ##
+##                                                                ##
+## Each variable is associated with a comment. The comment        ##
+## can help to populate the variables with the appropriate        ##
+## values.                                                        ##
+##                                                                ##
+## IMPORTANT NOTE: This file contains plain text passwords and    ##
+## should be secured to have read permission only by oracle user  ##
+## or db administrator who owns this installation.                ##
+##                                                                ##
+####################################################################
+
+
+#-------------------------------------------------------------------------------
+# Do not change the following system generated value.
+#-------------------------------------------------------------------------------
+oracle.install.responseFileVersion=/oracle/install/rspfmt_dbinstall_response_schema_v19.0.0
+
+oracle.install.option=INSTALL_DB_SWONLY
+
+UNIX_GROUP_NAME=oinstall
+INVENTORY_LOCATION=/u01/app/oraInventory
+ORACLE_HOME=/u01/app/oracle/product/19.0.0/dbhome_1
+ORACLE_BASE=/u01/app/oracle
+oracle.install.db.InstallEdition=EE
+oracle.install.db.OSDBA_GROUP=dba
+oracle.install.db.OSOPER_GROUP=dba
+oracle.install.db.OSBACKUPDBA_GROUP=dba
+oracle.install.db.OSDGDBA_GROUP=dba
+oracle.install.db.OSKMDBA_GROUP=dba
+oracle.install.db.OSRACDBA_GROUP=dba
+
+oracle.install.db.CLUSTER_NODES=vnoradev21,vnoradev22
+```
+
+### Install Oracle database
+```
+as root:
+# Node1
+chmod 775 /u01/app/grid/diag/crs/vnoradev21/crs/log
+chmod 775 /u01/app/grid/diag/crs/vnoradev21/crs
+chmod -R 775 /u01/app/grid/diag/crs/vnoradev21/crs
+chown -R oracle:oinstall /u01/app/oracle/
+# Node2
+chmod 775 /u01/app/grid/diag/crs/vnoradev22/crs/log
+chmod 775 /u01/app/grid/diag/crs/vnoradev22/crs
+chmod -R 775 /u01/app/grid/diag/crs/vnoradev22/crs
+chown -R oracle:oinstall /u01/app/oracle/
+
+$ORACLE_HOME/runInstaller -responseFile /u01/stage/rsp/dbhome_install.rsp -noconfig -silent -waitforcompletion  (Run on first node)
+```
+
+### Enable/disable options
+```
+chopt disable olap
+chopt disable rat
+```
+
+### Run postinstallation scripts
+```
+/u01/app/oracle/product/19.0.0/dbhome_1/root.sh (Run on both nodes)
 ```
