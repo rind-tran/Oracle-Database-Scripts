@@ -361,3 +361,14 @@ and to_char(a.LOG_DATE,'dd/mm/yyyy')=to_char(sysdate,'dd/mm/yyyy')
 order by a.LOG_DATE desc
 
 */
+
+--33/ sessions and processes
+select * from gv$parameter2 where NAME in ('sessions','processes');
+ 
+SELECT count(*), s.INST_ID, s.USERNAME, s.STATUS, s.CON_ID --, s.paddr
+FROM gv$session s LEFT JOIN gv$process p ON s.paddr = p.addr
+GROUP BY s.INST_ID, s.USERNAME, s.STATUS, s.CON_ID --, s.paddr
+ORDER BY s.INST_ID, count(*) desc;
+
+SELECT RESOURCE_NAME, CURRENT_UTILIZATION, MAX_UTILIZATION, LIMIT_VALUE FROM V$RESOURCE_LIMIT WHERE RESOURCE_NAME IN ( 'sessions', 'processes');
+
