@@ -372,7 +372,7 @@ ORDER BY s.INST_ID, count(*) desc;
 
 SELECT RESOURCE_NAME, CURRENT_UTILIZATION, MAX_UTILIZATION, LIMIT_VALUE FROM V$RESOURCE_LIMIT WHERE RESOURCE_NAME IN ( 'sessions', 'processes');
 
---34/ schema size difference
+--34/ tablespace size difference
 with tablespace_size as (
      select tablespace_name,
      min(snap_date) oldest_date,
