@@ -372,3 +372,37 @@ ORDER BY s.INST_ID, count(*) desc;
 
 SELECT RESOURCE_NAME, CURRENT_UTILIZATION, MAX_UTILIZATION, LIMIT_VALUE FROM V$RESOURCE_LIMIT WHERE RESOURCE_NAME IN ( 'sessions', 'processes');
 
+--34/ schema size difference
+with tablespace_size as (
+     select tablespace_name,
+     min(snap_date) oldest_date,
+     max(snap_date) latest_date
+     from dbadmin.t_ts_size
+     group by tablespace_name
+),
+oldest_sizes AS (
+    SELECT
+        t.tablespace_name,
+        GB AS oldest_gb
+    FROM
+        dbadmin.t_ts_size t
+    JOIN tablespace_size ts
+        ON t.tablespace_name = ts.tablespace_name AND t.snap_date = ts.oldest_date
+),
+latest_sizes AS (
+    SELECT
+        t.tablespace_name,
+        GB AS latest_gb
+    FROM
+        dbadmin.t_ts_size t
+    JOIN tablespace_size ts
+        ON t.tablespace_name = ts.tablespace_name AND t.snap_date = ts.latest_date
+)
+SELECT
+    o.tablespace_name,
+    l.latest_gb - o.oldest_gb AS gb_difference
+FROM
+    oldest_sizes o
+JOIN
+    latest_sizes l ON o.tablespace_name = l.tablespace_name
+ORDER BY gb_difference desc;
