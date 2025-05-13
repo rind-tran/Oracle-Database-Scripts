@@ -312,7 +312,7 @@ SELECT status, filename FROM V$BLOCK_CHANGE_TRACKING;
 SELECT * FROM gv$sgastat WHERE name LIKE '%CTWR%';
 SELECT inst_id, sid, program, status FROM gv$session WHERE program LIKE '%CTWR%';
 
-/*
+
 -- 30/ Display tablespace level database growth per week (Last Seven 7 Days)
 SELECT b.tsname tablespace_name,  --tablespace wise average size increase for last 7 days exclude today  
          MAX (b.used_size_mb) cur_used_size_mb,
@@ -338,7 +338,8 @@ ORDER BY ts.tsname, days ) a) b
 GROUP BY b.tsname
 ORDER BY b.tsname;
 
-/*
+
+
 -- Datafile & Tablespace
 select a.NAME DATAFILE_NAME,b.NAME TABLESPACE_NAME,a.STATUS, a.ENABLED, a.CHECKPOINT_CHANGE#, a.BYTES
 , a.BLOCKS, b.INCLUDED_IN_DATABASE_BACKUP, b.BIGFILE, b.FLASHBACK_ON 
@@ -360,7 +361,7 @@ where a.OWNER not like '%SYS'
 and to_char(a.LOG_DATE,'dd/mm/yyyy')=to_char(sysdate,'dd/mm/yyyy')
 order by a.LOG_DATE desc
 
-*/
+
 
 --33/ sessions and processes
 select * from gv$parameter2 where NAME in ('sessions','processes');
@@ -406,3 +407,9 @@ FROM
 JOIN
     latest_sizes l ON o.tablespace_name = l.tablespace_name
 ORDER BY gb_difference desc;
+
+-- 35 Check privilege on a table
+SELECT grantee, table_name, privilege
+        FROM dba_tab_privs
+        WHERE table_name like '%AUDIT%'
+        AND privilege = 'SELECT';
