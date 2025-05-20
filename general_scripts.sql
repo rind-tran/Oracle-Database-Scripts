@@ -413,3 +413,23 @@ SELECT grantee, table_name, privilege
         FROM dba_tab_privs
         WHERE table_name like '%AUDIT%'
         AND privilege = 'SELECT';
+
+-- 36 Check history blocking session
+SELECT DISTINCT a.sql_id,
+                a.current_obj#,
+                o.owner,
+                o.object_type,
+                o.object_name,
+             --   a.inst_id,
+                a.blocking_session         blocker_ses,
+                a.blocking_session_serial# blocker_ser,
+                a.user_id,
+                s.sql_text,
+                a.module,
+                a.sample_time
+  FROM dba_hist_active_sess_history a, gv$sql s, dba_objects o
+ WHERE     a.sql_id = s.sql_id
+       AND blocking_session IS NOT NULL
+       AND a.user_id <> 0                                  -- exclude SYS user
+       AND a.sample_time BETWEEN SYSDATE - 3 AND SYSDATE - 2
+       AND a.current_obj# = o.object_id
