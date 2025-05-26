@@ -553,3 +553,39 @@ sid=3696;
 -- 40 Kill session
 select   'alter system kill session '||''''|| a.SID ||','|| a.SERIAL# ||',@'|| a.inst_id || ''''||' immediate;'
  from gv$session a where a.USERNAME='DCAL';
+
+-- 41 Top block change
+SELECT to_char(begin_interval_time,'YY-MM-DD HH24') snap_time,
+dhso.owner,
+dhso.object_name,
+sum(db_block_changes_delta) BLOCK_CHANGED
+FROM dba_hist_seg_stat dhss,
+dba_hist_seg_stat_obj dhso,
+dba_hist_snapshot dhs
+WHERE dhs.snap_id = dhss.snap_id
+AND dhs.instance_number = dhss.instance_number
+AND dhss.obj# = dhso.obj#
+AND dhss.dataobj# = dhso.dataobj#
+AND begin_interval_time BETWEEN to_date('25-05-26 08:00','YY-MM-DD HH24:MI') AND to_date('25-05-26 09:00','YY-MM-DD HH24:MI')
+GROUP BY to_char(begin_interval_time,'YY-MM-DD HH24'),
+dhso.object_name, dhso.owner
+HAVING sum(db_block_changes_delta) > 0
+ORDER BY sum(db_block_changes_delta) desc ;
+
+-- 42 SQL text and row processsed in history
+SELECT to_char(begin_interval_time,'YYYY_MM_DD HH24') WHEN,
+dbms_lob.substr(sql_text,4000,1) SQL,
+dhss.instance_number INST_ID,
+dhss.sql_id,
+executions_delta exec_delta,
+rows_processed_delta rows_proc_delta
+FROM dba_hist_sqlstat dhss,
+dba_hist_snapshot dhs,
+dba_hist_sqltext dhst
+WHERE --upper(dhst.sql_text) LIKE '%G_PARTY%'
+ ltrim(upper(dhst.sql_text)) NOT LIKE 'SELECT%'
+AND dhss.snap_id=dhs.snap_id
+AND dhss.instance_number=dhs.instance_number
+AND dhss.sql_id=dhst.sql_id
+AND begin_interval_time BETWEEN to_date('25-05-26 08:00','YY-MM-DD HH24:MI') 
+AND to_date('25-05-26 09:00','YY-MM-DD HH24:MI') 
